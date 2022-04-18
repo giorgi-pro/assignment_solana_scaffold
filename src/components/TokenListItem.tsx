@@ -22,11 +22,11 @@ export const TokenListItem: FC<TokenListItemProps> = ({ error,address, info, onS
   if (error) {
     return <p>{ERROR_MESSAGE}</p>;
   }
-  return <div className="token-list-item">
+  return <div className="token-list-item flex flex-col">
     {!info ? LOADING_PROGRESS_MESSAGE_TEMPLATE(shortenText(address)) : (<>
       {info.error ? LOADING_ERROR_MESSAGE_TEMPLATE(shortenText(address)) : 
         info.image && <Image width={300} height={300} src={info.image} alt={IMAGE_ALT_TEXT} />}
-        <button className="sign-button" onClick={onSign}>
+        <button className="sign-button uppercase shadow-xl" onClick={onSign}>
           sign metadata
         </button>
     </>)}

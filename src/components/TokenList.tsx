@@ -15,7 +15,7 @@ export const TokenList: FC<TokenListProps> = ({ error, addresses, tokenInfos, ha
   if (error) {
     return <h2>{ERROR_MESSAGE}</h2>;
   }
-  return <div className="token-list-container">
+  return <div className="token-list-container flex flex-wrap justify-around">
     {addresses && addresses.map((_, index) => (<div key={index}>
       <TokenListItem address={_} info={tokenInfos[_]} onSign={handleSign(tokenInfos[_]?.metadata)} />
     </div>))}
