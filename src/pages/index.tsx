@@ -10,9 +10,9 @@ import { sign } from 'tweetnacl';
 import bs58 from 'bs58';
 
 import { SolBalance } from "../components/SolBalance";
-import { toSolValue } from "../utils/conversion";
+import { toSolValue } from "../utils";
 import { TokenList } from "../components/TokenList";
-import { TokenAddressInfoMap } from "../types";
+import { TokenAddressInfoMap, TokenInfo } from "../types";
 
 const EMPTY_TOKEN_ADDRESS_INFO_MAP = {};
 const SIGN_ERROR_MESSAGE = 'Invalid signature!'
@@ -93,27 +93,35 @@ export default function Home() {
 
     const getMetadata = async () => {
       if (!tokenAddressesResult) return Promise.resolve();
-      const getTokenMetadatas = tokenAddressesResult.addresses.map(async (_) => {
-        const metadataPDA = await Metadata.getPDA(_);
-        const mintAccInfo = await connection.getAccountInfo(metadataPDA);
-        const {
-          data: { data: metadata }
-        } = Metadata.from(new Account(_, mintAccInfo as any));
-        const image = await loadImageData(metadata.uri);
-        setTokenInfos({
-          ...tokenInfos,
-          [_]: {
-            metadata,
-            image,
+      const getTokenMetadatas = tokenAddressesResult.addresses.map(async (address): Promise<TokenInfo> => {
+        try {
+          const metadataPDA = await Metadata.getPDA(address);
+          const mintAccInfo = await connection.getAccountInfo(metadataPDA);
+          const {
+            data: { data: metadata }
+          } = Metadata.from(new Account(address, mintAccInfo as any));
+          const image = await loadImageData(metadata.uri);
+          return { address, metadata, image };
+        } catch (error) {
+          console.error(error);
+          return {
+            address,
+            error: true,
           }
-        })
+        }
       });
 
-      await Promise.allSettled(getTokenMetadatas);
+      const tokenInfos = await Promise.allSettled(getTokenMetadatas);
+      const tokenInfoMap = tokenInfos.map((_: any) => _.value).reduce((result: TokenAddressInfoMap, value: TokenInfo) => {
+        result[value.address] = value;
+        return result;
+      }, {});
+
+      setTokenInfos(tokenInfoMap);
     };
 
     getMetadata();
-  }, [connection, tokenAddressesResult, tokenInfos]);
+  }, [connection, tokenAddressesResult]);
 
   const handleSign = useCallback((message: any) => async () => {
     try {

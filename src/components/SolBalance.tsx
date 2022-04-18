@@ -11,5 +11,5 @@ export const SolBalance: FC<SolBalanceProps> = ({ error, amount }) => {
   if (error) {
     return <h2>{ERROR_MESSAGE}</h2>;
   }
-  return <h2>Balance: {amount} SOL</h2>
+  return <h2>Balance: <span className="balance-value">{amount} SOL</span></h2>
 };

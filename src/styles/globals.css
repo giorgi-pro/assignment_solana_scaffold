@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+
+:root {
+    --highlight-color: #e2580f;
+}
+
 .wallet-adapter-button-trigger,
 .wallet-adapter-dropdown {
     width: 200px !important;

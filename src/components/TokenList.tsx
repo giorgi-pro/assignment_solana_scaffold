@@ -17,7 +17,7 @@ export const TokenList: FC<TokenListProps> = ({ error, addresses, tokenInfos, ha
   }
   return <div className="token-list-container">
     {addresses && addresses.map((_, index) => (<div key={index}>
-      <TokenListItem info={tokenInfos[_]} onSign={handleSign(tokenInfos[_]?.metadata)} />
+      <TokenListItem address={_} info={tokenInfos[_]} onSign={handleSign(tokenInfos[_]?.metadata)} />
     </div>))}
   </div>
 };
