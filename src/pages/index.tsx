@@ -1,127 +1,23 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import Head from "next/head";
-
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { Metadata } from "@metaplex-foundation/mpl-token-metadata";
-import { Account } from "@metaplex-foundation/mpl-core";
 import { sign } from 'tweetnacl';
 import bs58 from 'bs58';
 
-import { SolBalance } from "../components/SolBalance";
-import { toSolValue } from "../utils";
-import { TokenList } from "../components/TokenList";
-import { TokenAddressInfoMap, TokenInfo } from "../types";
+import useTokenData from '../hooks/useTokenData';
+import useSolBalance from '../hooks/useSolBalance';
 
-const EMPTY_TOKEN_ADDRESS_INFO_MAP = {};
+import { SolBalance } from "../components/SolBalance";
+import { TokenList } from "../components/TokenList";
+
 const SIGN_ERROR_MESSAGE = 'Invalid signature!'
 const SIGN_SUCCESS_MESSAGE_TEMPLATE = (args: string) => `Message signed: ${args}`;
 
-type BalanceResult = {
-  amount?: string;
-  error?: any;
-}
-
-type TokenAddressResult = {
-  addresses: string[];
-  error?: any;
-}
-
 export default function Home() {
-  const [balanceResult, setBalanceResult] = useState<BalanceResult>();
-  const [tokenAddressesResult, setTokenAddressesResult] = useState<TokenAddressResult>();
-  const [tokenInfos, setTokenInfos] = useState<TokenAddressInfoMap>(EMPTY_TOKEN_ADDRESS_INFO_MAP);
-  
   const { publicKey, signMessage } = useWallet();
-  const { connection } = useConnection();
-
-  useEffect(() => {
-    if (!publicKey) {
-      setBalanceResult(undefined);
-      return;
-    }
-
-    const loadBalance = async () => {
-      try {
-        const balance = await connection.getBalance(publicKey);
-        setBalanceResult({
-          amount: toSolValue(balance),
-        });
-      } catch (error) {
-        setBalanceResult({
-          error: true,
-        });
-        console.error(error);
-      }
-    };
-
-    loadBalance();
-  }, [connection, publicKey]);
-
-  useEffect(() => {
-    if (!publicKey) {
-      setTokenAddressesResult(undefined);
-      setTokenInfos(EMPTY_TOKEN_ADDRESS_INFO_MAP);
-      return;
-    }
-
-    const loadTokens = async () => {
-      try {
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-          programId: TOKEN_PROGRAM_ID,
-        });
-
-        const tokenAddresses = tokenAccounts.value.map(_ => _.account.data.parsed.info?.mint as string).filter(_ => !!_);
-        setTokenAddressesResult({
-          addresses: tokenAddresses
-        });
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    loadTokens();
-  }, [connection, publicKey]);
-
-  useEffect(() => {
-    const loadImageData = async (uri: string) => {
-      const response = await fetch(uri);
-      const { image } = await response.json();
-      return image;
-    };
-
-    const getMetadata = async () => {
-      if (!tokenAddressesResult) return Promise.resolve();
-      const getTokenMetadatas = tokenAddressesResult.addresses.map(async (address): Promise<TokenInfo> => {
-        try {
-          const metadataPDA = await Metadata.getPDA(address);
-          const mintAccInfo = await connection.getAccountInfo(metadataPDA);
-          const {
-            data: { data: metadata }
-          } = Metadata.from(new Account(address, mintAccInfo as any));
-          const image = await loadImageData(metadata.uri);
-          return { address, metadata, image };
-        } catch (error) {
-          console.error(error);
-          return {
-            address,
-            error: true,
-          }
-        }
-      });
-
-      const tokenInfos = await Promise.allSettled(getTokenMetadatas);
-      const tokenInfoMap = tokenInfos.map((_: any) => _.value).reduce((result: TokenAddressInfoMap, value: TokenInfo) => {
-        result[value.address] = value;
-        return result;
-      }, {});
-
-      setTokenInfos(tokenInfoMap);
-    };
-
-    getMetadata();
-  }, [connection, tokenAddressesResult]);
+  const { balanceResult } = useSolBalance();
+  const { tokenAddressesResult, tokenInfos } = useTokenData();
 
   const handleSign = useCallback((message: any) => async () => {
     try {
