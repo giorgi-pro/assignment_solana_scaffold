@@ -1,34 +1,49 @@
+import { useCallback, useEffect, useState } from "react";
+import Head from "next/head";
+
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import Head from "next/head";
-import { useCallback, useEffect, useState } from "react";
+
 import { SolBalance } from "../components/SolBalance";
-import { Balance } from "../types";
 import { toSolValue } from "../utils/conversion";
+import { TokenList } from "../components/TokenList";
+import { TokenAddressInfoMap } from "../types";
+
+const EMPTY_TOKEN_ADDRESS_INFO_MAP = {};
+
+type BalanceResult = {
+  amount?: string;
+  error?: any;
+}
+
+type TokenAddressResult = {
+  addresses: string[];
+  error?: any;
+}
 
 export default function Home() {
-  const [balance, setBalance] = useState<Balance>();
+  const [balanceResult, setBalanceResult] = useState<BalanceResult>();
+  const [tokenAddressesResult, setTokenAddressesResult] = useState<TokenAddressResult>();
+  const [tokenInfos, setTokenInfos] = useState<TokenAddressInfoMap>(EMPTY_TOKEN_ADDRESS_INFO_MAP);
+  
   const { publicKey } = useWallet();
   const { connection } = useConnection();
 
-  const reset = useCallback(() => {
-    setBalance(undefined);
-  }, []);
-
   useEffect(() => {
     if (!publicKey) {
-      reset();
+      setBalanceResult(undefined);
       return;
     }
 
     const loadBalance = async () => {
       try {
         const balance = await connection.getBalance(publicKey);
-        setBalance({
+        setBalanceResult({
           amount: toSolValue(balance),
         });
       } catch (error) {
-        setBalance({
+        setBalanceResult({
           error: true,
         });
         console.error(error);
@@ -36,13 +51,39 @@ export default function Home() {
     };
 
     loadBalance();
-  }, [connection, publicKey, reset]);
+  }, [connection, publicKey]);
+
+  useEffect(() => {
+    if (!publicKey) {
+      setTokenAddressesResult(undefined);
+      setTokenInfos(EMPTY_TOKEN_ADDRESS_INFO_MAP);
+      return;
+    }
+
+    const loadTokens = async () => {
+      try {
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+          programId: TOKEN_PROGRAM_ID,
+        });
+
+        const tokenAddresses = tokenAccounts.value.map(_ => _.account.data.parsed.info?.mint as string).filter(_ => !!_);
+        setTokenAddressesResult({
+          addresses: tokenAddresses
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    loadTokens();
+  }, [connection, publicKey]);
 
   const renderConnectedContent = useCallback(() => {
     return (<>
-      <SolBalance {...balance} />
+      <SolBalance {...balanceResult} />
+      <TokenList {...tokenAddressesResult} />
     </>)
-  }, [balance]);
+  }, [balanceResult, tokenAddressesResult]);
 
   return (
     <div>
@@ -58,7 +99,7 @@ export default function Home() {
         className="flex fixed flex-col justify-center items-center"
         style={{ inset: 0 }}
       >
-        {balance ? renderConnectedContent() : <WalletMultiButton />}
+        {balanceResult ? renderConnectedContent() : <WalletMultiButton />}
       </main>
     </div>
   );
