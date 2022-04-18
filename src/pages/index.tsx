@@ -81,9 +81,9 @@ export default function Home() {
   const renderConnectedContent = useCallback(() => {
     return (<>
       <SolBalance {...balanceResult} />
-      <TokenList {...tokenAddressesResult} />
+      <TokenList {...tokenAddressesResult} tokenInfos={tokenInfos} />
     </>)
-  }, [balanceResult, tokenAddressesResult]);
+  }, [balanceResult, tokenAddressesResult, tokenInfos]);
 
   return (
     <div>

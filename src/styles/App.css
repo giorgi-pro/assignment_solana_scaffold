@@ -18,3 +18,16 @@ code {
 .wallet-adapter-button-trigger {
   width: 100%;
 }
+
+.token-list-container {
+  max-width: 1000px;
+  min-width: 360px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-around;
+}
+
+.token-list-item {
+  margin: 16px;
+}
