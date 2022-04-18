@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { Metadata } from "@metaplex-foundation/mpl-token-metadata";
 import { Account } from "@metaplex-foundation/mpl-core";
 
 import { TokenAddressInfoMap, TokenInfo } from "../types";
+import { delay, fromRange } from "../utils";
 
 type TokenAddressResult = {
   addresses: string[];
@@ -16,6 +17,8 @@ const EMPTY_TOKEN_ADDRESS_INFO_MAP = {};
 const useTokenData = () => {
   const { publicKey } = useWallet();
   const { connection } = useConnection();
+
+  const tokenInfosRef = useRef<TokenAddressInfoMap>();
 
   const [tokenAddressesResult, setTokenAddressesResult] = useState<TokenAddressResult>();
   const [tokenInfos, setTokenInfos] = useState<TokenAddressInfoMap>(EMPTY_TOKEN_ADDRESS_INFO_MAP);
@@ -54,31 +57,33 @@ const useTokenData = () => {
 
     const getMetadata = async () => {
       if (!tokenAddressesResult) return Promise.resolve();
-      const getTokenMetadatas = tokenAddressesResult.addresses.map(async (address): Promise<TokenInfo> => {
+      const getTokenMetadatas = tokenAddressesResult.addresses.map(async (address): Promise<void> => {
+        let tokenInfo: TokenInfo;
         try {
           const metadataPDA = await Metadata.getPDA(address);
           const mintAccInfo = await connection.getAccountInfo(metadataPDA);
+          await delay(fromRange(1000, 500));
           const {
             data: { data: metadata }
           } = Metadata.from(new Account(address, mintAccInfo as any));
           const image = await loadImageData(metadata.uri);
-          return { address, metadata, image };
+          tokenInfo = { address, metadata, image };
         } catch (error) {
           console.error(error);
-          return {
+          tokenInfo = {
             address,
             error: true,
           }
         }
+        tokenInfosRef.current = {
+          ...tokenInfosRef.current,
+          [address]: tokenInfo,
+        }
+        setTokenInfos(tokenInfosRef.current);
       });
 
-      const tokenInfos = await Promise.allSettled(getTokenMetadatas);
-      const tokenInfoMap = tokenInfos.map((_: any) => _.value).reduce((result: TokenAddressInfoMap, value: TokenInfo) => {
-        result[value.address] = value;
-        return result;
-      }, {});
-
-      setTokenInfos(tokenInfoMap);
+      await Promise.allSettled(getTokenMetadatas);
+      tokenInfosRef.current = undefined;
     };
 
     getMetadata();
