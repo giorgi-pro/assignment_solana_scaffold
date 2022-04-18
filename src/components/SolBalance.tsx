@@ -1,6 +1,6 @@
 import { FC, ReactNode } from 'react';
 
-const ERROR_MESSAGE = 'Could not retrieve balance';
+const ERROR_MESSAGE = 'could not retrieve balance';
 
 export interface SolBalanceProps {
   amount?: string;

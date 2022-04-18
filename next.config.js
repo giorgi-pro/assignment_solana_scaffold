@@ -48,6 +48,9 @@ const nextConfig = {
     }
     return config;
   },
+  images: {
+    domains: ['csnft.sfo3.digitaloceanspaces.com']
+  }
 };
 
 module.exports = withPlugins(plugins, nextConfig);
